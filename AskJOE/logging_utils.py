@@ -7,6 +7,9 @@ import logging
 import os
 import datetime
 
+# AskJOE dir (this package root) for config.ini and logs
+_ASKJOE_DIR = os.path.dirname(os.path.abspath(__file__))
+
 def setup_logging(script_name):
     """
     Setup standardized logging for AskJOE scripts
@@ -17,8 +20,8 @@ def setup_logging(script_name):
     Returns:
         tuple: (logger, log_file_path)
     """
-    # Create logs directory
-    log_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "AskJOE", "logs")
+    # Create logs directory under AskJOE/logs (not AskJOE/AskJOE/logs)
+    log_dir = os.path.join(_ASKJOE_DIR, "logs")
     os.makedirs(log_dir, exist_ok=True)
     
     # Create log file name
@@ -66,7 +69,7 @@ def get_log_level_from_config():
     """
     try:
         import configparser
-        config_path = os.path.join(os.path.dirname(__file__), "config.ini")
+        config_path = os.path.join(_ASKJOE_DIR, "config.ini")
         
         if os.path.exists(config_path):
             config = configparser.ConfigParser()
@@ -106,7 +109,7 @@ def get_logging_config(setting_name, default_value):
     """
     try:
         import configparser
-        config_path = os.path.join(os.path.dirname(__file__), "config.ini")
+        config_path = os.path.join(_ASKJOE_DIR, "config.ini")
         
         if os.path.exists(config_path):
             config = configparser.ConfigParser()

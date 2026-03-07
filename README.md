@@ -8,7 +8,7 @@
 > Transform your static analysis workflow with cutting-edge AI capabilities, comprehensive malware detection, and advanced threat intelligence.
 ##  What is AskJOE 2.0?
 
-AskJOE 2.0 is an evolution of the original [AskJOE project](https://github.com/securityjoes/AskJOE), transforming it from a single AI-powered function analyzer into a comprehensive malware analysis suite. Built on the foundation of Ghidra and OpenAI integration, this enhanced version adds 8 specialized analysis modules that provide deep insights into malware behavior, threat intelligence, and reverse engineering analysis.
+AskJOE 2.0 is an evolution of the original [AskJOE project](https://github.com/securityjoes/AskJOE), transforming it from a single AI-powered function analyzer into a comprehensive malware analysis suite. Built on the foundation of Ghidra and LLM integration (OpenAI or Claude), this enhanced version adds 8 specialized analysis modules that provide deep insights into malware behavior, threat intelligence, and reverse engineering analysis.
 
 ###  Evolution from AskJOE 1.0
 
@@ -110,7 +110,7 @@ AskJOE 2.0 is an evolution of the original [AskJOE project](https://github.com/s
 ### **Prerequisites**
 ```bash
 # Core dependencies
-pip install requests openai flare-capa
+pip install requests openai anthropic flare-capa
 
 # Ghidra with Ghidrathon support
 # Python 3.7+ with PyGhidra
@@ -118,8 +118,10 @@ pip install requests openai flare-capa
 
 ### **Installation Steps**
 1. **Clone/Download** the AskJOE 2.0 scripts
-2. **Place Scripts** in your `ghidra_scripts` directory
+2. **Place Scripts** in your `ghidra_scripts` directory (Windows, Linux, or macOS)
 3. **Configure API Keys** in `AskJOE/config.ini`
+   - Set `[AI].provider = claude` (recommended) or `openai`
+   - For Claude, set `[API_KEYS].claude_api_key` (or `ANTHROPIC_API_KEY` environment variable)
 4. **Enable Features** as needed in configuration
 5. **Run Scripts** from Ghidra's Script Manager
 
@@ -172,6 +174,7 @@ pip install requests openai flare-capa
 - [PyGhidra](https://github.com/NationalSecurityAgency/ghidra/tree/master/GhidraDev/GhidraScripts/Python)
 - [Mandiant CAPA](https://github.com/mandiant/capa)
 - [OpenAI API](https://platform.openai.com/)
+- [Claude API](https://platform.claude.com/)
 
 ##  License
 
