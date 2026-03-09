@@ -20,7 +20,6 @@
 - [Requirements](#requirements)
 - [Installation](#installation)
 - [Using AskJOE](#using-askjoe)
-- [Demo and screenshots](#demo-and-screenshots)
 - [Contributing](#contributing)
 - [License](#license)
 - [Contact](#contact)
