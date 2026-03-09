@@ -4,6 +4,42 @@
 # Use from other scripts; no @runtime here to allow import without PyGhidra when testing
 
 import re
+import os
+
+_ICON_IMAGE = None
+
+
+def get_joes_icon():
+    """
+    Try to load JOES.png from the AskJOE package or its parent.
+    Returns a java.awt.Image or None.
+    """
+    global _ICON_IMAGE
+    if _ICON_IMAGE is not None:
+        return _ICON_IMAGE
+    try:
+        from javax.imageio import ImageIO
+        from java.io import File
+    except Exception:
+        return None
+    try:
+        here = os.path.dirname(os.path.abspath(__file__))
+        candidates = [
+            os.path.join(here, "JOES-black.png"),
+            os.path.join(os.path.dirname(here), "JOES-black.png"),
+            os.path.join(here, "JOES.png"),
+            os.path.join(os.path.dirname(here), "JOES.png"),
+        ]
+        for p in candidates:
+            if os.path.isfile(p):
+                try:
+                    _ICON_IMAGE = ImageIO.read(File(p))
+                    return _ICON_IMAGE
+                except Exception:
+                    continue
+    except Exception:
+        return None
+    return None
 
 # -----------------------------------------------------------------------------
 # AI response preprocessing (normalize before rendering)
@@ -38,6 +74,53 @@ def _escape_html(text):
         .replace(">", "&gt;")
         .replace('"', "&quot;")
     )
+
+
+def _syntax_highlight_python(code_text):
+    """
+    Very lightweight Python syntax highlighter for HTML output.
+    Not a full parser, but good enough for readability in JEditorPane.
+    """
+    if not code_text:
+        return ""
+    import re as _re
+
+    # HTML-escape first so we never emit raw HTML from the code.
+    s = _escape_html(code_text)
+
+    # Strings (single and double quotes, no multi-line awareness)
+    string_pattern = r'(\"[^\"\\]*(?:\\.[^\"\\]*)*\"|\'[^\'\\]*(?:\\.[^\'\\]*)*\')'
+    s = _re.sub(string_pattern, r"<span class='py-str'>\1</span>", s)
+
+    # Keywords
+    py_keywords = (
+        "False|None|True|and|as|assert|async|await|break|class|continue|def|del|elif|else|"
+        "except|finally|for|from|global|if|import|in|is|lambda|nonlocal|not|or|pass|raise|"
+        "return|try|while|with|yield"
+    )
+    kw_pattern = r"\b(" + py_keywords + r")\b"
+    s = _re.sub(kw_pattern, r"<span class='py-kw'>\1</span>", s)
+
+    # Numbers
+    num_pattern = r"\b(\d+(?:\.\d*)?|\.\d+)\b"
+    s = _re.sub(num_pattern, r"<span class='py-num'>\1</span>", s)
+
+    # Comments – everything from # to end of line
+    comment_pattern = r"(\#.*?$)"
+    s = _re.sub(comment_pattern, r"<span class='py-comment'>\1</span>", s, flags=_re.MULTILINE)
+
+    return s
+
+
+def _syntax_highlight(code_text, lang_tag):
+    """Dispatch to a simple syntax highlighter based on language tag."""
+    if not lang_tag:
+        return _escape_html(code_text or "")
+    lang = (lang_tag or "").strip().lower()
+    if lang in ("python", "py"):
+        return _syntax_highlight_python(code_text or "")
+    # Fallback: plain escaped code
+    return _escape_html(code_text or "")
 
 
 def markdown_like_to_html(raw_text):
@@ -98,6 +181,8 @@ def markdown_like_to_html(raw_text):
         if stripped.startswith("```"):
             flush_table()
             flush_lists()
+            # Get optional language tag: ```python
+            lang = stripped[3:].strip().lower() if len(stripped) > 3 else ""
             i += 1
             code_lines = []
             while i < len(lines) and not lines[i].strip().startswith("```"):
@@ -106,8 +191,10 @@ def markdown_like_to_html(raw_text):
             if i < len(lines):
                 i += 1  # skip closing ```
             code_text = "\n".join(code_lines)
-            out.append("<pre class='code-block'>")
-            out.append(_escape_html(code_text))
+            highlighted = _syntax_highlight(code_text, lang)
+            cls = "code-block" + ((" code-" + lang) if lang else "")
+            out.append("<pre class='{}'>".format(cls))
+            out.append(highlighted)
             out.append("</pre>")
             continue
 
@@ -240,6 +327,12 @@ def _inline_md_to_html(s):
     s = re.sub(r"\*([^*]+)\*", r"<i>\1</i>", s)
     # `code`
     s = re.sub(r"`([^`]+)`", r"<code>\1</code>", s)
+    # Hex addresses like 0x0040335a > clickable link (use http URL so JEditorPane fires HyperlinkEvent)
+    def _addr_link(m):
+        hex_part = m.group(1)
+        addr_only = hex_part[2:] if hex_part.lower().startswith("0x") else hex_part
+        return "<a href=\"http://ghidra.goto/{}\" style='color:#1565c0;text-decoration:underline;'>{}</a>".format(addr_only, hex_part)
+    s = re.sub(r"\b(0x[0-9A-Fa-f]{5,})\b", _addr_link, s)
     return s
 
 
@@ -289,6 +382,13 @@ pre.code-block {
   line-height: 1.5; overflow-x: auto; margin: 0.6em 0; white-space: pre;
   border: 1px solid #37474f; box-shadow: 0 1px 4px rgba(0,0,0,0.12);
 }
+/* Lightweight Python syntax highlighting */
+pre.code-block.code-python .py-kw      { color: #c792ea; font-weight: 600; }
+pre.code-block.code-python .py-str     { color: #c3e88d; }
+pre.code-block.code-python .py-num     { color: #f78c6c; }
+pre.code-block.code-python .py-comment { color: #546e7a; font-style: italic; }
+a { color: #1565c0; text-decoration: underline; }
+a:hover { color: #0d47a1; }
 hr { border: none; border-top: 1px solid #90a4ae; margin: 1em 0; }
 table.report-table {
   border-collapse: collapse; margin: 0.6em 0; font-size: 12px;
@@ -416,15 +516,49 @@ def show_triage_results(formatted_text, title="AI Triage Analysis Results"):
             full_html = _build_html_document(body_html, title=title)
 
             frame = JFrame(title)
+            try:
+                icon = get_joes_icon()
+                if icon is not None:
+                    frame.setIconImage(icon)
+            except Exception:
+                pass
             frame.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE)
             frame.setSize(900, 700)
             frame.setLocationRelativeTo(None)
 
             editor = JEditorPane()
-            editor.setContentType("text/html")
-            editor.setText(full_html)
             editor.setEditable(False)
-            editor.setCaretPosition(0)
+
+            # Write HTML to a temporary file and load via setPage(URL) so Swing
+            # fully parses it (fixes blank/unstyled output on some setups).
+            try:
+                import tempfile
+                import os as _os
+                from java.net import URL
+                fd, path = tempfile.mkstemp(suffix=".html", prefix="askjoe_triage_", text=True)
+                try:
+                    _os.write(fd, full_html.encode("utf-8"))
+                finally:
+                    _os.close(fd)
+                normalized = path.replace("\\", "/")
+                file_url = ("file://" + normalized) if normalized.startswith("/") else ("file:///" + normalized)
+                editor.setContentType("text/html")
+                try:
+                    from javax.swing.text.html import HTMLEditorKit
+                    editor.setEditorKit(HTMLEditorKit())
+                except Exception:
+                    pass
+                editor.setPage(URL(file_url))
+            except Exception:
+                # Fallback: set HTML directly
+                editor.setContentType("text/html")
+                try:
+                    from javax.swing.text.html import HTMLEditorKit
+                    editor.setEditorKit(HTMLEditorKit())
+                except Exception:
+                    pass
+                editor.setText(full_html)
+                editor.setCaretPosition(0)
 
             scroll = JScrollPane(editor)
             scroll.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED)
@@ -466,6 +600,12 @@ def show_text_in_gui(plain_text, title="AskJOE Output"):
         try:
             html = _build_html_document("<pre>{}</pre>".format(_escape_html(plain_text)), title=title)
             frame = JFrame(title)
+            try:
+                icon = get_joes_icon()
+                if icon is not None:
+                    frame.setIconImage(icon)
+            except Exception:
+                pass
             frame.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE)
             frame.setSize(800, 600)
             frame.setLocationRelativeTo(None)
@@ -481,6 +621,137 @@ def show_text_in_gui(plain_text, title="AskJOE Output"):
                 println("[-] GUI failed: {}".format(e))
             except Exception:
                 print("[-] GUI failed: {}".format(e))
+
+    try:
+        if EventQueue.isDispatchThread():
+            _show()
+        else:
+            EventQueue.invokeLater(_show)
+        return True
+    except Exception:
+        return False
+
+
+def show_result_in_window(content, title="AskJOE Result", is_html=True):
+    """
+    Show HTML or plain text in a new JFrame with JOES icon.
+    Used for Func Simplifier, Threat Intel, etc. to open result in a dedicated window.
+    """
+    try:
+        from java.awt import EventQueue, BorderLayout
+        from javax.swing import (
+            JFrame,
+            JEditorPane,
+            JScrollPane,
+            WindowConstants,
+        )
+    except Exception:
+        return False
+
+    def _show():
+        try:
+            if is_html and content:
+                try:
+                    full_html = _build_html_document(content, title=title)
+                except Exception:
+                    full_html = content
+            else:
+                full_html = _build_html_document(
+                    "<pre>{}</pre>".format(_escape_html(content or "")), title=title
+                )
+
+            frame = JFrame(title)
+            try:
+                icon = get_joes_icon()
+                if icon is not None:
+                    frame.setIconImage(icon)
+            except Exception:
+                pass
+            frame.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE)
+            frame.setSize(900, 700)
+            frame.setLocationRelativeTo(None)
+
+            editor = JEditorPane()
+            editor.setEditable(False)
+            editor.setContentType("text/html")
+            try:
+                from javax.swing.text.html import HTMLEditorKit
+                editor.setEditorKit(HTMLEditorKit())
+            except Exception:
+                pass
+            try:
+                import tempfile
+                import os as _os
+                from java.net import URL
+                fd, path = tempfile.mkstemp(suffix=".html", prefix="askjoe_result_", text=True)
+                try:
+                    _os.write(fd, full_html.encode("utf-8"))
+                finally:
+                    _os.close(fd)
+                normalized = path.replace("\\", "/")
+                file_url = ("file://" + normalized) if normalized.startswith("/") else ("file:///" + normalized)
+                editor.setPage(URL(file_url))
+            except Exception:
+                editor.setText(full_html)
+            editor.setCaretPosition(0)
+
+            # Clickable addresses: handle http://ghidra.goto/ADDR and ghidra:goTo/ADDR (no Java inheritance)
+            try:
+                def _do_goto(addr_str):
+                    addr_str = (addr_str or "").strip()
+                    if not addr_str:
+                        return
+                    try:
+                        from AskJOE.explain_utils import go_to_address_in_ghidra, get_program_and_address_from_code_browser
+                        prog, _ = get_program_and_address_from_code_browser()
+                        if not prog:
+                            try:
+                                from ghidra.ghidra_builtins import currentProgram
+                                prog = currentProgram
+                            except Exception:
+                                pass
+                        if prog:
+                            go_to_address_in_ghidra(prog, addr_str)
+                    except Exception:
+                        pass
+
+                class _GoToHyperlinkListener(object):
+                    def hyperlinkUpdate(self, event):
+                        try:
+                            from javax.swing.event import HyperlinkEvent
+                            if event.getEventType() != HyperlinkEvent.EventType.ACTIVATED:
+                                return
+                            url = event.getURL()
+                            url_str = url.toString() if url else (event.getDescription() or "")
+                            if not url_str:
+                                return
+                            if "ghidra.goto" in url_str or "ghidra:goTo" in url_str:
+                                addr_str = url_str.split("/")[-1].split(":")[-1].strip()
+                                if addr_str:
+                                    _do_goto(addr_str)
+                        except Exception:
+                            pass
+
+                editor.addHyperlinkListener(_GoToHyperlinkListener())
+            except Exception:
+                pass
+
+            scroll = JScrollPane(editor)
+            scroll.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED)
+            scroll.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED)
+            frame.getContentPane().add(scroll, BorderLayout.CENTER)
+            frame.setVisible(True)
+            try:
+                frame.toFront()
+                frame.requestFocus()
+            except Exception:
+                pass
+        except Exception as e:
+            try:
+                from ghidra.ghidra_builtins import println
+                println("[-] Result window failed: {}".format(e))
+            except Exception:
+                print("[-] Result window failed: {}".format(e))
 
     try:
         if EventQueue.isDispatchThread():

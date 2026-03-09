@@ -7,6 +7,138 @@ Get decompiled code / disassembly for the current function or address.
 All functions that touch Ghidra API should be called from the EDT (e.g. from button handlers).
 """
 
+
+def get_program_and_address_from_code_browser():
+    """
+    Get (program, address) from the active Code Browser tool's cursor.
+    Use this so tools get the user's current cursor in the Listing/Decompiler,
+    not the script's context (e.g. entry point when run from AskJOE).
+    Must be called from Ghidra's EDT. Returns (program, address) or (None, None).
+    Safe for both Jython and JPype (PyGhidra 12); catches all errors so callers never crash.
+    """
+    try:
+        # Use JClass under JPype so getService() gets a Java Class and avoids proxy issues
+        try:
+            from jpype import JClass
+            CodeViewerServiceClass = JClass('ghidra.app.services.CodeViewerService')
+        except Exception:
+            from ghidra.app.services import CodeViewerService as CodeViewerServiceClass
+        from ghidra.framework.main import AppInfo
+        project = AppInfo.getActiveProject()
+        if not project:
+            return None, None
+        tm = project.getToolManager()
+        if not tm:
+            return None, None
+        tools = tm.getRunningTools()
+        if not tools:
+            return None, None
+        n = getattr(tools, 'length', None)
+        if n is None:
+            try:
+                n = len(tools)
+            except Exception:
+                return None, None
+        for i in range(n):
+            try:
+                tool = tools[i]
+            except Exception:
+                continue
+            if not tool:
+                continue
+            try:
+                svc = tool.getService(CodeViewerServiceClass)
+                if not svc:
+                    continue
+                loc = svc.getCurrentLocation()
+                if not loc:
+                    continue
+                prog = loc.getProgram()
+                addr = loc.getAddress()
+                if prog and addr:
+                    return prog, addr
+            except Exception:
+                continue
+    except Exception:
+        pass
+    except:  # noqa: B001 - catch Java Throwable in Jython/PyGhidra
+        pass
+    return None, None
+
+
+def go_to_address_in_ghidra(program, addr_str):
+    """
+    Navigate the active Code Browser to the given address.
+    addr_str: hex string e.g. "0x0040335a" or "0040335a".
+    Returns True if goTo was performed, False otherwise.
+    Safe for JPype; does not extend any Java class.
+    """
+    if not program or not addr_str:
+        return False
+    addr_str = str(addr_str).strip()
+    if not addr_str:
+        return False
+    try:
+        factory = program.getAddressFactory()
+        if not factory:
+            return False
+        addr = None
+        for s in (addr_str, "0x" + addr_str if not (addr_str.lower().startswith("0x")) else addr_str[2:], addr_str[2:] if addr_str.lower().startswith("0x") else addr_str):
+            try:
+                addr = factory.getAddress(s)
+                if addr is not None:
+                    break
+            except Exception:
+                pass
+        if addr is None:
+            try:
+                addr = factory.getAddress(addr_str)
+            except Exception:
+                pass
+        if addr is None:
+            return False
+        try:
+            from jpype import JClass
+            GoToServiceClass = JClass('ghidra.app.services.GoToService')
+        except Exception:
+            from ghidra.app.services import GoToService as GoToServiceClass
+        from ghidra.framework.main import AppInfo
+        project = AppInfo.getActiveProject()
+        if not project:
+            return False
+        tm = project.getToolManager()
+        if not tm:
+            return False
+        tools = tm.getRunningTools()
+        if not tools:
+            return False
+        n = getattr(tools, 'length', None)
+        if n is None:
+            try:
+                n = len(tools)
+            except Exception:
+                return False
+        for i in range(n):
+            try:
+                tool = tools[i]
+            except Exception:
+                continue
+            if not tool:
+                continue
+            try:
+                svc = tool.getService(GoToServiceClass)
+                if svc is not None:
+                    svc.goTo(addr)
+                    return True
+            except Exception:
+                continue
+    except Exception:
+        pass
+    except:  # noqa: B001
+        pass
+    return False
+
+
 def get_current_function_decompiled(program, address):
     """
     Get decompiled C code for the function containing the given address.
@@ -30,6 +162,82 @@ def get_current_function_decompiled(program, address):
     except Exception:
         pass
     return None, None
+
+
+def get_strings_from_program(program, max_count=400, min_len=3):
+    """
+    Extract defined strings from the binary for use in AI context.
+    Must be called from Ghidra's main/EDT thread. Returns a single formatted string
+    (address + string per line) or None if none found.
+    """
+    if not program:
+        return None
+    try:
+        listing = program.getListing()
+        data_iter = listing.getDefinedData(True)
+        lines = []
+        count = 0
+        while data_iter.hasNext() and count < max_count:
+            try:
+                data = data_iter.next()
+                val = data.getDefaultValueRepresentation()
+                if not val or len(val) < min_len:
+                    continue
+                # Skip pure hex or numeric
+                val_stripped = val.strip()
+                if not val_stripped:
+                    continue
+                # Require at least one printable letter for string-like content
+                if not any(c.isalpha() for c in val_stripped):
+                    continue
+                addr = data.getAddress()
+                if addr:
+                    line = "0x{}  {}".format(addr, val.replace("\n", " ").replace("\r", "")[:200])
+                    lines.append(line)
+                    count += 1
+            except Exception:
+                continue
+        return "\n".join(lines) if lines else None
+    except Exception:
+        return None
+
+
+def get_imports_from_program(program, max_count=300):
+    """
+    Extract external/import symbols from the binary for use in AI context.
+    Must be called from Ghidra's main/EDT thread. Returns a single formatted string
+    (one symbol per line) or None if none found.
+    """
+    if not program:
+        return None
+    try:
+        symbol_table = program.getSymbolTable()
+        ext_symbols = symbol_table.getSymbols("EXTERNAL")
+        names = []
+        try:
+            it = ext_symbols.iterator()
+            while it.hasNext() and len(names) < max_count:
+                try:
+                    sym = it.next()
+                    name = sym.getName()
+                    if name and name not in names:
+                        names.append(name)
+                except Exception:
+                    continue
+        except Exception:
+            # Fallback: try Python iteration
+            for sym in ext_symbols:
+                if len(names) >= max_count:
+                    break
+                try:
+                    name = sym.getName()
+                    if name and name not in names:
+                        names.append(name)
+                except Exception:
+                    continue
+        return "\n".join(sorted(names)) if names else None
+    except Exception:
+        return None
 
 
 def get_disassembly_around(program, address, num_lines=20):
@@ -166,4 +374,25 @@ def resolve_query_macros(program, address, message):
                 resolved = resolved.replace("#addr", "[disassembly above]").replace("#address", "[disassembly above]")
         elif user_asked_addr:
             resolved = resolved.replace("#addr", "[no disassembly at current address]").replace("#address", "[no disassembly at current address]")
+
+    # Macros that pull data from the loaded binary (not cursor-dependent)
+    if program and ("#strings" in message or "#string" in message.lower()):
+        strings_block = get_strings_from_program(program)
+        if strings_block:
+            context_parts.append("[Strings extracted from the binary (address  value)]\n```\n{}\n```".format(strings_block))
+            resolved = resolved.replace("#strings", "[strings from binary above]")
+            if "#string" in message.lower():
+                resolved = resolved.replace("#string", "[strings from binary above]")
+        else:
+            resolved = resolved.replace("#strings", "[no strings extracted]").replace("#string", "[no strings extracted]")
+    if program and ("#imports" in message or "#import" in message.lower()):
+        imports_block = get_imports_from_program(program)
+        if imports_block:
+            context_parts.append("[Imports / external symbols from the binary]\n```\n{}\n```".format(imports_block))
+            resolved = resolved.replace("#imports", "[imports from binary above]")
+            if "#import" in message.lower():
+                resolved = resolved.replace("#import", "[imports from binary above]")
+        else:
+            resolved = resolved.replace("#imports", "[no imports found]").replace("#import", "[no imports found]")
+
     return resolved, context_parts

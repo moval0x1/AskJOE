@@ -374,7 +374,7 @@ def detect_stack_strings(operation):
                 strings_to_show = type_strings[:max_strings_per_type] if max_strings_per_type > 0 else type_strings
                 for i, ss in enumerate(strings_to_show):
                     s_preview = ss['recovered'][:80] + "..." if len(ss['recovered']) > 80 else ss['recovered']
-                    println("- **0x{}** → `{}`".format(ss['address'], s_preview.replace("`", "'")))
+                    println("- **0x{}** > `{}`".format(ss['address'], s_preview.replace("`", "'")))
                 if max_strings_per_type > 0 and len(type_strings) > max_strings_per_type:
                     println("- *... and {} more (adjust max_strings_per_type in config to see all)*".format(len(type_strings) - max_strings_per_type))
                 println("")
@@ -383,7 +383,7 @@ def detect_stack_strings(operation):
             for string_type, strings in sorted(by_type.items()):
                 println("- **{}:** {}".format(string_type, len(strings)))
             println("")
-            println("*Use Ctrl+G and an address above to jump in the Listing.*")
+            println("*Click an address to go to it in the Listing.*")
             
             log_info(logger, "Stack strings detection completed. Found {} valid strings out of {} candidates".format(
                 len(stack_strings), total_candidates))
@@ -392,7 +392,7 @@ def detect_stack_strings(operation):
             println("")
             if total_candidates > 0:
                 println("- **{}** candidates were found but filtered out by validation (printable ratio, entropy, etc.).".format(total_candidates))
-                println("- Adjust **config.ini** → `[STACK_STRINGS]` (e.g. `min_printable_ratio`, `max_entropy_threshold`) to relax filters.")
+                println("- Adjust **config.ini** > `[STACK_STRINGS]` (e.g. `min_printable_ratio`, `max_entropy_threshold`) to relax filters.")
             else:
                 println("- No stack-string candidates (PUSH/MOV with scalar operands) were found in this binary.")
             log_info(logger, "No valid stack strings detected out of {} candidates".format(total_candidates))

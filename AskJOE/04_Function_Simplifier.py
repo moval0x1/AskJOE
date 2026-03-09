@@ -202,7 +202,8 @@ def export_function_simplification(address, function_code, simplified_code):
 def main():
     """Main function for the Function Simplifier"""
     try:
-        println("[+] Starting Function Simplifier...")
+        # Use console for status so AskJOE panel can focus on the code output
+        print("[+] Starting Function Simplifier...")
         log_info(logger, "Function Simplifier started")
         
         # Check if we're in Ghidra environment
@@ -377,10 +378,10 @@ def run():
         
         if success:
             log_info(logger, "Function Simplifier script completed successfully")
-            println("Function Simplifier completed successfully!")
+            print("[+] Function Simplifier completed successfully!")
         else:
             log_error(logger, "Function Simplifier script failed or encountered errors")
-            println("[-] Function Simplifier failed or encountered errors")
+            print("[-] Function Simplifier failed or encountered errors")
         
     except Exception as ex:
         error_msg = "Function Simplifier script failed: {}".format(str(ex))

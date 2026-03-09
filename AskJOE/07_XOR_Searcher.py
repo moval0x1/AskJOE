@@ -264,21 +264,23 @@ def run_advanced_xor_search(operation):
         println("- **Suspicious (decodeable):** {}".format(len(suspicious_xors)))
         println("")
         
-        if xor_operations:
-            println("### Individual XOR operations")
-            println("*Use Ctrl+G with an address to jump in the Listing.*")
+        # Focus the main list on entries that produced a meaningful decoded string
+        decoded_ops = [op for op in xor_operations if op.get('decoded')]
+        if decoded_ops:
+            println("### Individual XOR operations (decoded strings)")
+            println("*Click an address to go to it in the Listing.*")
             println("")
-            for op in xor_operations:
-                decoded = op['decoded'] if op['decoded'] else "—"
-                println("- **0x{}** {} — `{}` `{}` → **{}**".format(
+            for op in decoded_ops:
+                decoded = op['decoded']
+                println("- **0x{}** {} — `{}` `{}` > **{}**".format(
                     op['address'], op['type'], op['operand1'], op['operand2'], decoded))
                 if op['suspicious']:
                     try:
                         code_unit = listing.getCodeUnitAt(op['address'])
                         if code_unit:
                             comment = "Suspicious XOR: {} -> {}".format(op['operand1'], op['operand2'])
-                            if op['decoded']:
-                                comment += " | Decoded: {}".format(op['decoded'])
+                            if decoded:
+                                comment += " | Decoded: {}".format(decoded)
                             code_unit.setComment(code_unit.EOL_COMMENT, comment)
                     except Exception:
                         pass
@@ -295,9 +297,9 @@ def run_advanced_xor_search(operation):
                         loop_addresses.append("0x{}".format(xor_instr['analysis']['address']))
                         valid_analyses.append(xor_instr['analysis'])
                 if loop_addresses:
-                    println("- **Loop {}** ({} XORs): {}".format(i + 1, len(loop), " → ".join(loop_addresses)))
+                    println("- **Loop {}** ({} XORs): {}".format(i + 1, len(loop), " > ".join(loop_addresses)))
                     for a in valid_analyses:
-                        println("  - 0x{} `{}` `{}` → {}".format(
+                        println("  - 0x{} `{}` `{}` > {}".format(
                             a['address'], a['operand1'], a['operand2'],
                             a['decoded'] if a.get('decoded') else "—"))
                         if a.get('suspicious'):
@@ -310,13 +312,13 @@ def run_advanced_xor_search(operation):
                                 pass
                 else:
                     addrs = ["0x{}".format(x['instruction'].getAddress()) for x in loop]
-                    println("- **Loop {}**: {}".format(i + 1, " → ".join(addrs)))
+                    println("- **Loop {}**: {}".format(i + 1, " > ".join(addrs)))
                 println("")
         
         if suspicious_xors:
             println("### Suspicious XORs (decodeable strings)")
             for op in suspicious_xors:
-                println("- **0x{}** key=**{}** → `{}`".format(op['address'], op.get('key', '?'), op['decoded'] or ''))
+                println("- **0x{}** key=**{}** > `{}`".format(op['address'], op.get('key', '?'), op['decoded'] or ''))
             println("")
         
         log_info(logger, "Advanced XOR search completed. Found {} operations, {} loops".format(

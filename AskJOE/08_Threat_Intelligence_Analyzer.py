@@ -947,7 +947,163 @@ class ThreatIntelligenceAnalyzer:
             return {"error": str(e)}
     
     def display_results(self, results, file_hash):
-        """Display comprehensive threat intelligence results"""
+        """Display threat intelligence results in a GUI window and in the console."""
+        # ---------------- GUI REPORT (markdown-like, same style as AI triage) ----------------
+        report_text = None
+        try:
+            summary = results.get("summary", {}) or {}
+            service_status = results.get("service_status", {}) or {}
+            details = results.get("details", {}) or {}
+
+            lines = []
+            lines.append("# AskJOE – Threat Intelligence Results")
+            lines.append("")
+            lines.append("**File hash**: `{}`".format(file_hash))
+            lines.append("**Threat level**: {}".format(summary.get("threat_level", "UNKNOWN")))
+            lines.append("**Detection rate**: {}".format(summary.get("detection_rate", "N/A")))
+            pct = summary.get("detection_percentage", 0)
+            if isinstance(pct, (int, float)) and pct > 0:
+                lines.append("**Detection percentage**: {:.1f}%".format(pct))
+            lines.append("**Sources with results**: {}/{}".format(
+                summary.get("sources_with_results", 0),
+                summary.get("total_sources_queried", 0),
+            ))
+            lines.append("")
+
+            if service_status:
+                lines.append("## Service status")
+                for service_name, status_info in service_status.items():
+                    display = service_name.replace("_", " ").title()
+                    status = status_info.get("status", "unknown")
+                    details_txt = status_info.get("details", "")
+                    prefix = "**SUCCESS**" if status == "success" else "**FAILED**"
+                    lines.append("- {} – {}: {}".format(display, prefix, details_txt))
+                lines.append("")
+
+            vt = details.get("virustotal") or {}
+            if vt and "error" not in vt:
+                lines.append("## VirusTotal")
+                lines.append("- **Detection ratio**: {}".format(vt.get("detection_ratio", "N/A")))
+                lines.append("- **Malicious / Suspicious / Total**: {} / {} / {}".format(
+                    vt.get("malicious", "N/A"),
+                    vt.get("suspicious", "N/A"),
+                    vt.get("total_engines", "N/A"),
+                ))
+                fams = vt.get("malware_families") or []
+                if fams:
+                    lines.append("- **Malware families**: {}".format(", ".join(fams)))
+                threats = vt.get("popular_threat_names") or vt.get("threat_names") or []
+                if threats:
+                    lines.append("- **Threat names**: {}".format(", ".join(threats[:5])))
+                tags = vt.get("tags") or []
+                if tags:
+                    lines.append("- **Tags**: {}".format(", ".join(tags[:15])))
+                vt_url = "https://www.virustotal.com/gui/file/{}".format(file_hash)
+                lines.append("- **Report URL**: {}".format(vt_url))
+                lines.append("")
+
+            hybrid = details.get("hybrid_analysis") or {}
+            if hybrid and "error" not in hybrid:
+                lines.append("## Hybrid Analysis")
+                lines.append("- **Threat score**: {}".format(hybrid.get("threat_score", "N/A")))
+                verdict = hybrid.get("verdict")
+                if verdict:
+                    lines.append("- **Verdict**: {}".format(verdict))
+                url = hybrid.get("analysis_url")
+                if url:
+                    lines.append("- **Report URL**: {}".format(url))
+                lines.append("")
+
+            otx = details.get("alienvault") or {}
+            if otx and "error" not in otx:
+                lines.append("## AlienVault OTX")
+                lines.append("- **Pulse count**: {}".format(otx.get("pulse_count", 0)))
+                references = otx.get("related_urls") or otx.get("references") or []
+                if references:
+                    lines.append("- **References**:")
+                    for ref in references[:5]:
+                        lines.append("  - {}".format(ref))
+                lines.append("")
+
+            mb = details.get("malware_bazaar") or {}
+            if mb and "error" not in mb:
+                lines.append("## Malware Bazaar")
+                lines.append("- **Status**: {}".format(mb.get("status", "unknown")))
+                sig = mb.get("signature")
+                if sig and sig != "N/A":
+                    lines.append("- **Signature**: {}".format(sig))
+                tags = mb.get("tags") or []
+                if tags:
+                    lines.append("- **Tags**: {}".format(", ".join(tags)))
+                url = mb.get("download_url")
+                if url:
+                    lines.append("- **Entry URL**: {}".format(url))
+                lines.append("")
+
+            intezer = details.get("intezer") or {}
+            if intezer and "error" not in intezer:
+                lines.append("## Intezer")
+                fam = intezer.get("family_name")
+                if fam and fam != "N/A":
+                    lines.append("- **Family**: {}".format(fam))
+                verdict = intezer.get("verdict")
+                if verdict:
+                    lines.append("- **Verdict**: {}".format(verdict))
+                url = intezer.get("analysis_url")
+                if url:
+                    lines.append("- **Report URL**: {}".format(url))
+                lines.append("")
+
+            anyrun = details.get("anyrun") or {}
+            if anyrun and "error" not in anyrun:
+                lines.append("## Any.Run")
+                verdict = anyrun.get("verdict")
+                if verdict:
+                    lines.append("- **Verdict**: {}".format(verdict))
+                url = anyrun.get("analysis_url")
+                if url:
+                    lines.append("- **Analysis URL**: {}".format(url))
+                lines.append("")
+
+            triage = details.get("triage") or {}
+            if triage and "error" not in triage:
+                lines.append("## Hatching Triage")
+                verdict = triage.get("verdict")
+                if verdict:
+                    lines.append("- **Verdict**: {}".format(verdict))
+                url = triage.get("analysis_url")
+                if url:
+                    lines.append("- **Report URL**: {}".format(url))
+                lines.append("")
+
+            xforce = details.get("xforce") or {}
+            if xforce and "error" not in xforce:
+                lines.append("## X-Force Exchange")
+                risk = xforce.get("risk")
+                if risk:
+                    lines.append("- **Risk level**: {}".format(risk))
+                cats = xforce.get("categories") or []
+                if cats:
+                    lines.append("- **Categories**: {}".format(", ".join(cats)))
+                url = xforce.get("url")
+                if url:
+                    lines.append("- **Entry URL**: {}".format(url))
+                lines.append("")
+
+            if lines:
+                report_text = "\n".join(lines)
+        except Exception as build_err:
+            log_debug(logger, "Failed to build TI markdown report: {}".format(build_err))
+            report_text = None
+
+        if report_text:
+            try:
+                from AskJOE.gui_utils import show_triage_results
+                show_triage_results(report_text, title="AskJOE – Threat Intelligence Results")
+            except Exception as gui_err:
+                log_debug(logger, "Threat intel GUI display not available: {}".format(gui_err))
+
+        # ---------------- Existing console output (unchanged) ----------------
         try:
             if "error" in results:
                 println("[-] {}".format(results['error']))

@@ -1,0 +1,17 @@
+# AskJOE – Python dependencies for Ghidra scripts
+# Install in the Python environment used by Ghidra: pip install -r requirements.txt
+#
+# Core (needed for multiple tools)
+# -------------------------------
+requests>=2.28.0          # Threat Intelligence (APIs: VirusTotal, Hybrid Analysis, etc.)
+
+# AI (needed for AI Triage, Explain, Query)
+# ----------------------------------------
+anthropic>=0.18.0         # Claude (when [AI] provider = claude)
+openai>=1.0.0             # OpenAI (when [AI] provider = openai)
+
+# CAPA Analysis (when using Tools > CAPA Analysis)
+# -----------------------------------------------
+flare-capa                # FLARE CAPA: identify capabilities in executables (or use standalone from GitHub releases)
+
+# (Function Graph / Neo4j dependency removed – currently unused)
