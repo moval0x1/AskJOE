@@ -24,7 +24,6 @@
 - [Requirements](#requirements)
 - [Installation](#installation)
 - [Using AskJOE](#using-askjoe)
-- [Contributing](#contributing)
 - [License](#license)
 - [Contact](#contact)
 
@@ -250,16 +249,6 @@ Tools are grouped below by role. All support **clickable addresses** in the outp
 4. The report opens in a new window and is saved to disk.  
 5. Share or attach the generated file for case notes, tickets, or reports.
 
-
-## Contributing
-
-- Keep compatibility with supported Ghidra and PyGhidra versions.  
-- Reuse existing patterns: `AskJOE/logging_utils.py`, error handling, status messages, and HTML/CSS output.  
-- Update `ROADMAP.md` and `README.md` when adding tools or changing behaviour.
-
-Pull requests and issues are welcome.
-
----
 
 ## License
 
