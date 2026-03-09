@@ -7,9 +7,9 @@
 > **AI-powered malware analysis and threat intelligence for Ghidra**  
 > A focused suite of helpers for malware analysis and reverse engineering: triage, capability detection, threat intel, string recovery, renaming, and reporting—all from one launcher with a consistent UI and clickable output.
 
-## AskJOE
+## Watch a video explaining AskJOE
 
-[![Watch the video](https://img.youtube.com/vi/9u2YdBEdP8c/maxresdefault.jpg)](https://www.youtube.com/watch?v=9u2YdBEdP8c)
+[![Watch the video](https://img.youtube.com/vi/9u2YdBEdP8c/maxresdefault.jpg)](https://www.youtube.com/watch?v=9u2YdBEdP8c "Watch the video")
 
 ## Demo
 
