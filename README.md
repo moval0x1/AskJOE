@@ -9,7 +9,7 @@
 
 ## AskJOE
 
-<iframe width="560" height="315" src="https://www.youtube.com/embed/9u2YdBEdP8c" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+[![Watch the video](https://img.youtube.com/vi/9u2YdBEdP8c/maxresdefault.jpg)](https://www.youtube.com/watch?v=9u2YdBEdP8c)
 
 ## Demo
 
