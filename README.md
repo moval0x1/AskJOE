@@ -119,7 +119,7 @@ Tools are grouped below by role. All support **clickable addresses** in the outp
 
 ### Opening the launcher
 
-![AskJOE GUI](/imgs/askjoe-gui.png "AskJOE GUI")
+![AskJOE GUI](/imgs/askjoe-gui-analysis.png "AskJOE GUI")
 
 - Run `AskJOE.py` from the Script Manager (or use the keybinding if set, e.g. **Ctrl+Shift+J**).  
 - The window shows the **Analysis** tab (tool list + output) and **Config** tab.
