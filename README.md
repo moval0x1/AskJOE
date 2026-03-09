@@ -7,6 +7,9 @@
 > **AI-powered malware analysis and threat intelligence for Ghidra**  
 > A focused suite of helpers for malware analysis and reverse engineering: triage, capability detection, threat intel, string recovery, renaming, and reporting—all from one launcher with a consistent UI and clickable output.
 
+## Demo
+
+![AskJOE 3.0 mini walkthrough](/imgs/AskJOE3-running.gif "AskJOE 3.0 mini walkthrough")
 
 
 ## Table of contents
@@ -119,7 +122,7 @@ Tools are grouped below by role. All support **clickable addresses** in the outp
 
 ### Opening the launcher
 
-![AskJOE GUI](/imgs/askjoe-gui-analysis.png "AskJOE GUI")
+![AskJOE GUI Analysis](/imgs/askjoe-gui-analysis.png "AskJOE GUI Analysis")
 
 - Run `AskJOE.py` from the Script Manager (or use the keybinding if set, e.g. **Ctrl+Shift+J**).  
 - The window shows the **Analysis** tab (tool list + output) and **Config** tab.
@@ -244,33 +247,6 @@ Tools are grouped below by role. All support **clickable addresses** in the outp
 4. The report opens in a new window and is saved to disk.  
 5. Share or attach the generated file for case notes, tickets, or reports.
 
----
-
-## Demo and screenshots
-
-*Add your demo video link and screenshots here. Suggested places:*
-
-- **Main launcher** – AskJOE window with Analysis tab and tool list.
-- **Explain Function** – “Current function” label, Refresh, and sample output.
-- **Rename Helper** – Window with Refresh, Suggest, and the suggestions table.
-- **Ask AI** – Chat window with presets and macro hints.
-- **AI Triage / Threat Intel** – Example HTML report with clickable addresses.
-
-Example:
-
-```markdown
-### Demo video
-
-- [AskJOE 3.0 walkthrough](https://example.com/askjoe-demo) – Launch, AI Triage, Threat Intel, Rename Helper, Ask AI, Export Report.
-
-### Screenshots
-
-| Launcher | Explain Function | Rename Helper |
-|----------|------------------|---------------|
-| ![Launcher](screenshots/launcher.png) | ![Explain](screenshots/explain.png) | ![Rename](screenshots/rename.png) |
-```
-
----
 
 ## Contributing
 
