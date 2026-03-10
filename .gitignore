@@ -1,3 +1,22 @@
+# API keys and secrets - never commit
+AskJOE/config.ini
+**/config.ini
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.env
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
